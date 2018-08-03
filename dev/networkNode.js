@@ -50,36 +50,14 @@ app.get('/mine', function(req, res) {
 });
 
 
-
-// receive new block
-app.post('/receive-new-block', function(req, res) {
-	const newBlock = req.body.newBlock;
-	const lastBlock = coin.getLastBlock();
-	const correctHash = lastBlock.hash === newBlock.previousBlockHash;
-	const correctIndex = lastBlock['index'] + 1 === newBlock['index'];
-
-	if (correctHash && correctIndex) {
-		coin.chain.push(newBlock);
-		coin.pendingTransactions = [];
-		res.json({
-			note: 'New block received and accepted.',
-			newBlock: newBlock
-		});
-	} else {
-		res.json({
-			note: 'New block rejected.',
-			newBlock: newBlock
-		});
-	}
-});
-
-
 // register a node and broadcast it to the network
 app.post('/register-and-broadcast-node', function(req, res) {
 	const newNodeUrl = req.body.newNodeUrl;
+  //if the newNodeUrl is not alreadt present in array, then push it in
 	if (coin.networkNodes.indexOf(newNodeUrl) == -1) coin.networkNodes.push(newNodeUrl);
 
 	const regNodesPromises = [];
+  //for every nodes in the array, we will register the new node by hitting /register-node
 	coin.networkNodes.forEach(networkNodeUrl => {
 		const requestOptions = {
 			uri: networkNodeUrl + '/register-node',
@@ -87,12 +65,14 @@ app.post('/register-and-broadcast-node', function(req, res) {
 			body: { newNodeUrl: newNodeUrl },
 			json: true
 		};
-
+    //pushing all requests to regNodesPromises
 		regNodesPromises.push(rp(requestOptions));
 	});
 
+  //Running all requests
 	Promise.all(regNodesPromises)
 	.then(data => {
+    //register all the nodes to the new nodes
 		const bulkRegisterOptions = {
 			uri: newNodeUrl + '/register-nodes-bulk',
 			method: 'POST',
@@ -114,7 +94,7 @@ app.post('/register-node', function(req, res) {
 	const nodeNotAlreadyPresent = coin.networkNodes.indexOf(newNodeUrl) == -1;
 	const notCurrentNode = coin.currentNodeUrl !== newNodeUrl;
 	if (nodeNotAlreadyPresent && notCurrentNode) coin.networkNodes.push(newNodeUrl);
-	res.json({ note: 'New node registered successfully.' });
+	res.json({ note: 'New node registered successfully with node.' });
 });
 
 
