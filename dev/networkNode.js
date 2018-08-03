@@ -23,8 +23,32 @@ app.get('/blockchain', function (req, res) {
 
 // create a new transaction
 app.post('/transaction', function(req, res) {
-  const blockIndex = coin.createNewTransaction(req.body.amount, req.body.sender, req.body.recipient);
+  const newTransaction = req.body;
+  const blockIndex = coin.addTransactionToPendingTransactions(newTransaction);
   res.json({ note: `Transaction will be added in block ${blockIndex}.`});
+});
+
+
+app.post('/transaction/broadcast', function(req, res) {
+  const newTransaction = coin.createNewTransaction(req.body.amount, req.body.sender, req.body.recipient);
+  coin.addTransactionToPendingTransactions(newTransaction);
+
+  const requestPromises = [];
+  coin.networkNodes.forEach(networkNodeUrl => {
+    const requestOptions = {
+      uri: networkNodeUrl + '/transaction',
+      method: 'POST',
+      body: newTransaction,
+      json: true
+    };
+
+    requestPromises.push(rp(requestOptions));
+  });
+
+  Promise.all(requestPromises)
+  .then(data => {
+    res.json({ note: 'Transaction created and broadcast successfully' });
+  });
 });
 
 
