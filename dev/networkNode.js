@@ -182,6 +182,51 @@ app.post('/register-nodes-bulk', function(req, res) {
 	res.json({ note: 'Bulk registration successful.' });
 });
 
+app.get('/consensus', function(req, res) {
+  const requestPromises = [];
+  coin.networkNodes.forEach(networkNodeUrl => {
+    const requestOptions = {
+      uri: networkNodeUrl + '/blockchain',
+      method: 'GET',
+      json: true
+    };
+
+    requestPromises.push(rp(requestOptions));
+  });
+
+  Promise.all(requestPromises)
+  .then(blockchains => {
+    const currentChainLength = coin.chain.length;
+    let maxChainLenth = currentChainLength;
+    let newLongestChain = null;
+    let newPendingTransaction = null;
+    //iterate all blockchains in the network
+    blockchains.forEach(blockchain => {
+      //if there is a longer chain
+      if (blockchain.chain.length > maxChainLenth) {
+        maxChainLenth = blockchain.chain.length;
+        newLongestChain = blockchain.chain;
+        newPendingTransaction = blockchain.pendingTransactions;
+      };
+    });
+    //if current chain is the longest or there is a new longest chain but it is invalid
+      if(!newLongestChain || (newLongestChain && !coin.chainIsValid(newLongestChain))){
+        res.json({
+          note: 'Current has not been replaced.',
+          chain: coin.chain
+        });
+      } else if(newLongestChain && coin.chainIsValid(newLongestChain)){
+        //replace current chain with the longest chain
+        coin.chain = newLongestChain;
+        coin.pendingTransactions = newPendingTransaction;
+        res.json({
+          note: 'The chain has been replaced.',
+          chain: coin.chain
+        });
+      }
+  });
+});
+
 app.listen(port, function() {
 	console.log(`Listening on port ${port}...`);
 });
