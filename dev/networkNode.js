@@ -245,11 +245,15 @@ app.get('/transaction/:transactionId', function(req,res) {
 });
 
 app.get('/address/:address', function(req,res) {
-    const address = req.params.address;
-    const addressData = coin.getAddressData(address);
-    res.json({
-      addressData: addressData
-    });
+  const address = req.params.address;
+  const addressData = coin.getAddressData(address);
+  res.json({
+    addressData: addressData
+  });
+});
+
+app.get('/block-explorer', function(req, res){
+  res.sendFile('./block-explorer/index.html', { root: __dirname });
 });
 
 app.listen(port, function() {
